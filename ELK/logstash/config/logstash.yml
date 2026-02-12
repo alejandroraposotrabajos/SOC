@@ -1,0 +1,8 @@
+http.host: "0.0.0.0"
+http.port: 9600
+pipeline.workers: 4
+pipeline.batch.size: 512
+pipeline.batch.delay: 50
+pipeline.unsafe_shutdown: false
+log.level: info
+path.logs: /usr/share/logstash/logs

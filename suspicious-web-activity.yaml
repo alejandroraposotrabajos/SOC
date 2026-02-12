@@ -1,0 +1,46 @@
+name: Detección de Actividad Sospechosa en Web
+description: Detecta patrones sospechosos en logs de servidores web
+type: frequency
+index: logs-*
+num_events: 5
+timeframe:
+  minutes: 10
+
+filter:
+  - query:
+      query_string:
+        query: 'tags:webserver AND (suspicious_activity:true OR (message:(".." OR "./" OR "//" OR "cmd" OR "exec" OR "eval" OR "shell" OR "whoami")))'
+
+alert:
+  - hivealerter
+  - email
+
+hive_connection:
+  hive_host: http://thehive
+  hive_port: 9000
+  hive_apikey: "d671wLjnJS9KwZpiPjcfxz+lzu6+6DCo"
+  hive_verify: false
+
+hive_alert_config:
+  title: "Suspicious Web Activity Detected"
+  type: "alert"
+  source: "ElastAlert"
+  severity: 3
+  tlp: 2
+  tags: ["web", "suspicious", "injection"]
+
+email: ["soc-alerts@company.local"]
+from_addr: elastalert@company.local
+smtp_host: localhost
+
+alert_text: |
+  ⚠️ ACTIVIDAD WEB SOSPECHOSA DETECTADA
+  
+  Tipo de Alerta: Actividad Sospechosa en Servidor Web
+  Timestamp: {match_time}
+  Número de Eventos: {num_matches}
+  
+  Detalles:
+  {match_body}
+  
+  Acción Recomendada: Revisar logs de acceso para patrones de inyección o evasión

@@ -1,0 +1,54 @@
+name: Escalación de Alertas a TheHive
+description: Envía alertas críticas desde ELK a TheHive para investigación
+type: frequency
+index: logs-*
+num_events: 3
+timeframe:
+  minutes: 5
+
+filter:
+  - query:
+      query_string:
+        query: 'security_alert:true OR (tags:suspicious_activity OR tags:auth_failure OR tags:privilege_change)'
+
+alert:
+  - hivealerter
+
+# ================= Configuración de TheHive =================
+hive_connection:
+  hive_host: http://thehive
+  hive_port: 9000
+  hive_apikey: "rrKS8lonWxqb54CRRLmuAAGqtbq8CWQI"
+  hive_verify: false
+  hive_proxies:
+    http: ""
+    https: ""
+
+# ================= Configuración de la Alerta =================
+hive_alert_config:
+  title: "SOC Alert - {match_time}"
+  type: "alert"
+  source: "ElastAlert"
+  severity: 2
+  tlp: 2
+  tags: ["soc", "elastalert", "automated"]
+  follow: true
+
+# ================= Reporte de Alertas =================
+alert_text: |
+  Alert Type: {alert_type}
+  Timestamp: {match_time}
+  Matches: {num_matches}
+  
+  {match_body}
+
+alert_text_type: alert_only
+  title: "ALERTA Crítica: {0}"
+  type: "external"
+  source: "ElastAlert"
+  description: "Se ha detectado un evento crítico: {0}"
+  severity: 3
+  tlp: 2
+  tags: ["elk", "automatizado"]
+  customFields:
+    trigger: "{0}"

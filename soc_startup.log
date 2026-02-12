@@ -1,0 +1,12 @@
+[INFO] 2026-02-11 20:50:11 - Verificando requisitos previos...
+[OK] 2026-02-11 20:50:11 - Docker está instalado
+[OK] 2026-02-11 20:50:12 - Docker Compose está instalado
+[OK] 2026-02-11 20:50:15 - Docker daemon está activo
+[INFO] 2026-02-11 20:50:15 - Validando archivos de configuración...
+[OK] 2026-02-11 20:50:15 - Configuración encontrada: docker-compose.yml
+[OK] 2026-02-11 20:50:15 - Configuración encontrada: filebeat.yml
+[OK] 2026-02-11 20:50:15 - Configuración encontrada: logstash.conf
+[OK] 2026-02-11 20:50:15 - Configuración encontrada: config.yaml
+[OK] 2026-02-11 20:50:15 - Configuración encontrada: application.conf
+[OK] 2026-02-11 20:50:15 - Configuración encontrada: application.conf
+[INFO] 2026-02-11 20:50:15 - Limpiando estado anterior...

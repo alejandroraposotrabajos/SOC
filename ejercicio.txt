@@ -1,0 +1,47 @@
+Proyecto - Construcción de un CyberSOC
+básico
+UD 4 - Construcción de un CyberSOC
+Contexto
+Una organización ficticia de tamaño medio (50–100 empleados) desea mejorar su
+capacidad para detectar y gestionar incidentes de ciberseguridad. Para ello, decide
+implantar un CyberSOC básico, basado en tecnologías open source y desplegado mediante
+contenedores Docker.
+Vuestro equipo forma parte del grupo encargado de diseñar, desplegar y operar este
+CyberSOC. El objetivo no es únicamente instalar herramientas, sino demostrar que la
+organización es capaz de:
+● Monitorizar sus sistemas.
+● Detectar eventos relevantes.
+● Generar alertas.
+● Clasificar, documentar y hacer seguimiento de incidentes de seguridad.
+Como responsables de vuestro equipo, entregaréis una infraestructura operativa basada en
+Docker que cubra el ciclo de vida completo de un evento de seguridad:
+● Ingesta y Recolección: Captura de logs de sistemas finales (Endpoints) y red.
+● Análisis y Correlación (SIEM): Centralización de datos y detección de patrones
+sospechosos.
+● Gestión de Alertas: Notificación automática de eventos críticos.
+● Gestión de Incidentes (Ticketing): Documentación, triaje y resolución de casos.
+Criterios de evaluación
+● Criterio b - Se han establecido controles, herramientas y mecanismos de
+monitorización, identificación, detección y alerta de incidentes.
+● Criterio e - Se ha realizado una clasificación, valoración, documentación y
+seguimiento de los incidentes detectados dentro de la organización.
+Stack técnico sugerido
+Para garantizar la viabilidad del proyecto, la solución deberá desplegarse mediante
+docker-compose e incluir, al menos, un componente de cada una de las siguientes
+categorías:
+● SIEM / Dashboards: Wazuh, Elastic Stack (ELK), o Grafana + Loki.
+● Recolección (Agents): Wazuh Agent, Filebeat, o Sysmon.
+● Gestión de Incidentes: TheHive, Shuffle (SOAR), o GLPI.
+● Generación de Tráfico: Kali Linux, scripts de simulación o ataques controlados.
+Contenido del proyecto
+El equipo deberá presentar los siguientes elementos para considerar el proyecto como
+"apto":
+● Repositorio: Un repositorio (GitHub/GitLab) con los archivos Dockerfile y
+docker-compose.yml necesarios para levantar todo el entorno con un solo comando.
+● Memoria Técnica: Documento que detalle el esquema de red, la justificación de las
+herramientas elegidas y la política de retención de logs.
+● Manual de Operación (Playbook): Un breve procedimiento que explique qué debe
+hacer un analista cuando salte una alerta específica.
+● Demostración práctica en clase: Ejecución de un ataque simulado (ej. fuerza bruta
+SSH o escaneo de puertos) y visualización de cómo el SOC detecta, alerta y genera
+un ticket de incidente automáticamente

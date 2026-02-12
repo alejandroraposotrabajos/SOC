@@ -1,0 +1,226 @@
+
+services:
+  # ========================
+  # ELASTICSEARCH - Base de datos de logs
+  # ========================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: soc4-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.monitoring.collection.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - logger.level=WARN
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"yellow\"\\|\"status\":\"green\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cybsoc_net
+    restart: unless-stopped
+
+  # ========================
+  # LOGSTASH - Procesamiento de logs
+  # ========================
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: soc4-logstash
+    ports:
+      - "5044:5044" # Estándar para Beats
+      - "5001:5001/tcp"
+      - "5000:5000/udp"
+    volumes:
+      - ./ELK/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - ./ELK/logstash/pipeline:/usr/share/logstash/pipeline:ro
+    environment:
+      - LS_JAVA_OPTS=-Xmx512m -Xms256m
+    env_file:
+      - .env
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9600/_node/stats || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - cybsoc_net
+    restart: unless-stopped
+
+  # ========================
+  # KIBANA - Visualización y análisis
+  # ========================
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: soc4-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - XPACK_SECURITY_ENABLED=false
+      - LOGGING_LEVEL_ROOT=warn
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      # Comprobación más simple: responde HTTP 200 en /api/status
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cybsoc_net
+    restart: unless-stopped
+
+  # ========================
+  # FILEBEAT - Recolector de logs
+  # ========================
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.0
+    container_name: soc4-filebeat
+    user: root
+    volumes:
+      - ./agents/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log:/var/log:ro
+    command: filebeat -e -strict.perms=false
+    depends_on:
+      logstash:
+        condition: service_healthy
+    networks:
+      - cybsoc_net
+    restart: unless-stopped
+
+  # ========================
+  # CORTEX - Análisis de artefactos
+  # ========================
+  cortex:
+    image: thehiveproject/cortex:4.0.0
+    container_name: soc4-cortex
+    ports:
+      - "9001:9001"
+    environment:
+      - play.http.secret.key=b3f8c9e6a1d2f4b6c3e9a0f1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c
+      - job.runner=docker
+      - docker.type=socket
+      - docker.sock=/var/run/docker.sock
+    volumes:
+      - ./cortex/config/application.conf:/etc/cortex/application.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - cortex-jobs:/opt/cortex/jobs
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9001/index.html || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 60s # Gives Cortex 60 seconds to warm up before checking health
+    networks:
+      - cybsoc_net
+    restart: unless-stopped
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    
+
+  # ========================
+  # THE HIVE - Gestión de casos
+  # ========================
+  cassandra:
+    image: cassandra:3.11
+    container_name: soc4-cassandra
+    environment:
+      - CASSANDRA_START_RPC=true
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'describe keyspaces' || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+    networks:
+      - cybsoc_net
+    restart: unless-stopped
+
+  thehive:
+    image: strangebee/thehive:5.5
+    container_name: soc4-thehive
+    ports:
+      - "9000:9000"
+    environment:
+      - play.http.secret.key=q3G7z8Kp9R1s5Vx2Yw4Zb6Nq0Tj8Lm3FpH7uC2dR
+    volumes:
+      - ./thehive/config/application.conf:/etc/thehive/application.conf:ro
+      - thehive-data:/opt/thehive/data/files
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      cortex:
+        condition: service_healthy
+      cassandra:
+        condition: service_healthy
+    user: "0"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sfS -o /dev/null http://localhost:9000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 300s
+    networks:
+      - cybsoc_net
+    restart: unless-stopped
+
+  # ========================
+  # ELASTALERT - Motor de alertas
+  # ========================
+  elastalert:
+    image: ghcr.io/jertel/elastalert2/elastalert2:latest
+    container_name: soc4-elastalert
+    volumes:
+      - ./ea-config/config.yaml:/opt/elastalert/config.yaml:ro
+      - ./ea-config/rules:/opt/elastalert/rules:ro
+      - elastalert-logs:/opt/elastalert/logs
+    command: ["--verbose", "--config", "/opt/elastalert/config.yaml"]
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH_PORT=9200
+    healthcheck:
+      test: ["CMD", "ps", "-ef", "|", "grep", "elastalert"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - cybsoc_net
+    restart: unless-stopped
+    
+
+volumes:
+  elasticsearch-data:
+    driver: local
+  cortex-jobs:
+    driver: local
+  thehive-data:
+    driver: local
+  elastalert-logs:
+    driver: local
+  cassandra-data:
+    driver: local
+  
+
+networks:
+  cybsoc_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16

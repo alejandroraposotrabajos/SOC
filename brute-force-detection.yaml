@@ -1,0 +1,52 @@
+name: Múltiples Intentos de Autenticación Fallidos
+description: Detecta ataques de fuerza bruta basados en intentos de autenticación fallidos
+type: frequency
+index: logs-*
+num_events: 5
+timeframe:
+  minutes: 5
+
+filter:
+  - query:
+      query_string:
+        query: 'tags:auth_failure OR (message:("failed password" OR "authentication failure"))'
+
+aggregation:
+  - terms:
+      size: 10
+      field: source_ip
+
+alert:
+  - hivealerter
+  - email
+
+hive_connection:
+  hive_host: http://thehive
+  hive_port: 9000
+  hive_apikey: "d671wLjnJS9KwZpiPjcfxz+lzu6+6DCo"
+  hive_verify: false
+
+hive_alert_config:
+  title: "Brute Force Attack Detected - {agg_data[0][0]}"
+  type: "alert"
+  source: "ElastAlert"
+  severity: 3
+  tlp: 2
+  tags: ["auth", "brute-force", "attack"]
+
+email: ["soc-alerts@company.local"]
+from_addr: elastalert@company.local
+smtp_host: localhost
+
+alert_text: |
+  🚨 ATAQUE DE FUERZA BRUTA DETECTADO
+  
+  Tipo: Múltiples Intentos de Autenticación Fallidos
+  Timestamp: {match_time}
+  IP de Origen: {agg_data[0][0]}
+  Intentos: {num_matches}
+  
+  Acción Recomendada: 
+  1. Bloquear la IP temporalmente
+  2. Verificar logs de acceso previos
+  3. Implementar alerta en SIEM

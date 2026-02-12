@@ -1,0 +1,65 @@
+filebeat.config:
+  modules:
+    path: ${path.config}/modules.d/*.yml
+    reload.enabled: true
+    reload.period: 10s
+
+filebeat.inputs:
+  - type: container
+    paths:
+      - /var/lib/docker/containers/*/*.log
+    # Evita que Filebeat procese logs de la propia suite ELK si generan mucho ruido
+    exclude_lines: ['DEBUG', 'INFO'] 
+    fields_under_root: true
+    tags: ["docker"]
+
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/auth.log
+    fields_under_root: true
+    tags: ["system", "auth"]
+
+# ================= Procesamiento de Logs =================
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_docker_metadata: ~
+  - add_kubernetes_metadata: ~
+  - decode_json_fields:
+      fields: ["message"]
+      target: json
+      overwrite_keys: true
+  - add_fields:
+      target: soc
+      fields:
+        environment: production
+        team: security-ops
+
+# ================= Outputs =================
+output.logstash:
+  hosts: ["logstash:5044"]
+  bulk_max_size: 2048
+  workers: 2
+  loadbalance: true
+  compression_level: 1
+
+# ================= Logging =================
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644
+
+# ================= ILM (Index Lifecycle Management) =================
+setup.ilm.enabled: true
+setup.ilm.check_exists: true
+setup.ilm.rollover_alias: "filebeat"
+setup.ilm.pattern: "{now/d}-000001"
+
+# ================= Template =================
+setup.template.enabled: true
+setup.template.name: "filebeat"
+setup.template.pattern: "filebeat-*"

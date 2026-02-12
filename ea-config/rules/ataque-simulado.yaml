@@ -1,0 +1,41 @@
+name: "OPERACION_VICTORIA_OBSERVABLES8"
+type: "any"
+index: "soc-logs-*"
+
+# Evita que ElastAlert se adelante a la indexación de ES
+query_delay:
+  minutes: 1
+
+# Aseguramos que el campo source_ip esté siempre disponible
+include: ["source_ip", "message"]
+
+filter:
+- query_string:
+    query: "tags: 'auth_failure'"
+
+alert: "elastalert.alerters.thehive.HiveAlerter"
+
+hive_connection:
+  hive_host: "http://soc4-thehive"
+  hive_port: 9000
+  hive_apikey: "r9KGpakoCJQcPDeHf/CC5AgbH3ZNe7iW"
+
+# Mapeo de argumentos para el título
+alert_subject: "ALERTA SOC: IP {0} detectada"
+alert_subject_args:
+  - source_ip
+
+hive_alert_config:
+  type: "external"
+  source: "elastalert"
+  severity: 3
+
+realert:
+  minutes: 0
+
+# Sintaxis optimizada para TheHive 5.x
+observable_artifacts:
+  - type: 'ip'
+    value: '{0}'
+    value_args:
+      - source_ip

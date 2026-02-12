@@ -1,0 +1,41 @@
+name: Cambios de Privilegios o Permisos Detectados
+description: Monitorea cambios en permisos de archivos y cambios de privilegios
+type: any
+index: logs-*
+
+filter:
+  - query:
+      query_string:
+        query: 'tags:privilege_change OR (message:(chmod OR chown OR sudo OR sudoedit))'
+
+alert:
+  - hivealerter
+  - email
+
+hive_connection:
+  hive_host: http://thehive
+  hive_port: 9000
+  hive_apikey: "d671wLjnJS9KwZpiPjcfxz+lzu6+6DCo"
+  hive_verify: false
+
+hive_alert_config:
+  title: "Privilege/Permission Change Detected"
+  type: "alert"
+  source: "ElastAlert"
+  severity: 2
+  tlp: 2
+  tags: ["privilege-escalation", "file-permissions", "system-audit"]
+
+email: ["soc-alerts@company.local"]
+from_addr: elastalert@company.local
+smtp_host: localhost
+
+alert_text: |
+  ⚠️ CAMBIO DE PRIVILEGIOS/PERMISOS DETECTADO
+  
+  Timestamp: {match_time}
+  
+  Detalles del Evento:
+  {match_body}
+  
+  Acción Recomendada: Verificar autorización y contexto del cambio
