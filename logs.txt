@@ -1,1 +1,17 @@
 
+
+$attackerIp = "192.168.100.50"
+$payload = @{
+    "message"   = "Failed password for root from $attackerIp"
+    "source_ip" = $attackerIp
+    "tags"      = @("auth_failure")
+} | ConvertTo-Json -Compress
+
+# Create a UDP client and send the "attack" to Logstash
+$udpClient = New-Object System.Net.Sockets.UdpClient
+$udpClient.Connect("127.0.0.1", 5000)
+$encodedPayload = [System.Text.Encoding]::UTF8.GetBytes($payload)
+$udpClient.Send($encodedPayload, $encodedPayload.Length)
+$udpClient.Close()
+
+Write-Host "Attack simulation sent to Logstash for IP: $attackerIp" -ForegroundColor Green
